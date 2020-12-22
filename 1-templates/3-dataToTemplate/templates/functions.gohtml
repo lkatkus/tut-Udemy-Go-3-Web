@@ -1,0 +1,19 @@
+{{$person := .}}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <h1>My name {{$person.LastName}}</h1>
+  <h1>My name {{upperCase $person.LastName}}</h1>
+  <h2>{{.Name}} {{$person.LastName}}</h1>
+  <h2>{{.Name}} {{upperCase $person.LastName}}</h1>
+
+  <h3>And the first three letter of my name are {{firstThree $person.LastName}}</h3>
+  <h3>And the first three letter of my name in uppercase are {{upperCase (firstThree $person.LastName)}}</h3>
+</body>
+</html>

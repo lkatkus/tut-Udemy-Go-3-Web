@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <div>
+    <div>{{.Slice}}</div>
+    <div>{{index .Slice 1}}</div>
+    <div>{{index .Slice 2}}</div>
+    <div>{{index .Slice 0}}</div>
+  </div>
+
+  <div>
+    {{.Ten}} == {{.Five}} ? {{eq .Ten .Five}}
+    {{.Ten}} != {{.Five}} ? {{ne .Ten .Five}}
+    {{.Ten}} < {{.Five}} ? {{lt .Ten .Five}}
+    {{.Ten}} > {{.Five}} ? {{gt .Ten .Five}}
+  </div>
+
+  <div>
+    {{if gt .Ten .Five}}
+      YES, Ten is greater than Five
+    {{end}}
+  </div>
+  <div>
+    {{if gt .Five .Ten}}
+      YES, Ten is greater than Five
+    {{else}}
+      NOPE, Five is not greater than Ten
+    {{end}}
+  </div>
+</body>
+</html>

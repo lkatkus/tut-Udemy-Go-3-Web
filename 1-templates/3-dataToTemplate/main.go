@@ -3,14 +3,26 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 	"text/template"
 )
 
 var parsedTemplates *template.Template
+var fm = template.FuncMap{
+	"upperCase":  strings.ToUpper,
+	"firstThree": firstThree,
+}
+
+func firstThree(s string) string {
+	s = strings.TrimSpace(s)
+	s = s[:3]
+	return s
+}
 
 func init() {
 	os.Mkdir("html", os.ModePerm)
-	parsedTemplates = template.Must(template.ParseGlob("./templates/*"))
+	tmpl, err := template.New("").Funcs(fm).ParseGlob("./templates/*")
+	parsedTemplates = template.Must(tmpl, err)
 }
 
 type person struct {
@@ -25,6 +37,7 @@ func main() {
 	dataStruct()
 	dataSliceStruct()
 	dataSliceStructSlice()
+	functions()
 }
 
 func dataInt() {
@@ -124,4 +137,18 @@ func printToFile(fn string, tn string, data interface{}) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func functions() {
+	type person struct {
+		Name     string
+		LastName string
+	}
+
+	p := person{
+		Name:     "James",
+		LastName: "Bond",
+	}
+
+	printToFile("./html/functions.html", "functions.gohtml", p)
 }
