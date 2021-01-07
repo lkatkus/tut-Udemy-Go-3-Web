@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"photoBlog/internal/auth"
+	"strings"
+	"time"
 
 	uuid "github.com/satori/go.uuid"
 )
@@ -21,6 +23,8 @@ var DB *sql.DB
 
 // Connect - todo
 func Connect() {
+	ticker := time.NewTicker(5 * time.Second)
+
 	conn, err := sql.Open("mysql", "testUser:password@tcp(localhost:3306)/photoBlog")
 	if err != nil {
 		panic(err.Error())
@@ -31,11 +35,51 @@ func Connect() {
 	}
 
 	DB = conn
+
+	go checkSessions(ticker)
 }
 
 // Close - todo
 func Close() {
 	DB.Close()
+}
+
+func checkSessions(ticker *time.Ticker) {
+	q := fmt.Sprint("SELECT sID, sActivity FROM sessions;")
+
+	for {
+		select {
+		case <-ticker.C:
+			res, err := DB.Query(q)
+			if err != nil {
+				log.Fatal("Internal server error")
+			}
+
+			var oldSessions []string
+
+			for res.Next() {
+				var sID string
+				var sActivity int
+				if err := res.Scan(&sID, &sActivity); err != nil {
+					log.Fatal(err)
+				}
+
+				if int(time.Now().Unix())-sActivity > 60 {
+					oldSessions = append(oldSessions, sID)
+				}
+			}
+
+			if len(oldSessions) > 0 {
+				dq := fmt.Sprintf("DELETE from sessions WHERE sID IN ('%v');", strings.Join(oldSessions, "', '"))
+				_, err := DB.Query(dq)
+				fmt.Println(dq)
+				if err != nil {
+					fmt.Println(err)
+					log.Fatal("Internal server error")
+				}
+			}
+		}
+	}
 }
 
 // CreateUser - todo
@@ -46,7 +90,7 @@ func CreateUser(u User) (int, error) {
 		return 0, err
 	}
 
-	q := fmt.Sprintf("INSERT INTO `photoBlog`.`users` (`uName`, `uPassword`) VALUES ('%v', '%v')", un, up)
+	q := fmt.Sprintf("INSERT INTO users (`uName`, `uPassword`) VALUES ('%v', '%v')", un, up)
 
 	res, err := DB.Query(q)
 	if err != nil {
@@ -68,7 +112,7 @@ func CreateUser(u User) (int, error) {
 
 // LoginUser - todo
 func LoginUser(u User) (string, error) {
-	q := fmt.Sprintf("SELECT uId, uPassword FROM photoBlog.users WHERE uName = '%v';", u.UserName)
+	q := fmt.Sprintf("SELECT uId, uPassword FROM users WHERE uName = '%v';", u.UserName)
 	res := DB.QueryRow(q)
 
 	var id string
@@ -92,28 +136,48 @@ func LoginUser(u User) (string, error) {
 
 // CreateSession - todo
 func CreateSession(id string) (string, error) {
-	sID, err := uuid.NewV4()
+	uuid, err := uuid.NewV4()
 	if err != nil {
 		return "", errors.New("Internal server error")
 	}
 
-	q := fmt.Sprintf("INSERT INTO `photoBlog`.`sessions` (`sID`, `uID`) VALUES ('%v', '%v')", sID.String(), id)
+	sID := uuid.String()
+	uID := id
+	t := time.Now().Unix()
+
+	q := fmt.Sprintf("INSERT INTO sessions (`sID`, `uID`, `sActivity`) VALUES ('%v', '%v', '%v')", sID, uID, t)
 	_, err = DB.Query(q)
 	if err != nil {
 		return "", errors.New("Internal server error")
 	}
 
-	return sID.String(), nil
+	return sID, nil
 }
 
 // CheckSession - todo
 func CheckSession(sID string) error {
-	q := fmt.Sprintf("SELECT uId FROM photoBlog.sessions WHERE sID = '%v';", sID)
+	q := fmt.Sprintf("SELECT sActivity FROM sessions WHERE sID = '%v';", sID)
 	res := DB.QueryRow(q)
 
-	var id string
-	if err := res.Scan(&id); err != nil {
+	var sActivity string
+	err := res.Scan(&sActivity)
+	if err != nil {
 		return errors.New("Session not available")
+	}
+
+	RefreshSession(sID)
+
+	return nil
+}
+
+// RefreshSession - todo
+func RefreshSession(sID string) error {
+	nt := time.Now().Unix()
+	q := fmt.Sprintf("UPDATE sessions SET sActivity = %v WHERE sID = '%v';", nt, sID)
+
+	res := DB.QueryRow(q)
+	if err := res.Scan(); err != nil {
+		return errors.New("Internal server error")
 	}
 
 	return nil

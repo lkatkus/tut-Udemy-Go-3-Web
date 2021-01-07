@@ -46,6 +46,12 @@ func indexHandler(w http.ResponseWriter, req *http.Request) {
 
 	err = db.CheckSession(c.Value)
 	if err != nil {
+		c = &http.Cookie{
+			Name:   "session",
+			Value:  "",
+			MaxAge: -1,
+		}
+		http.SetCookie(w, c)
 		http.Redirect(w, req, "/login", http.StatusSeeOther)
 		return
 	}
